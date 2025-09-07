@@ -87,18 +87,3 @@ Puedes cambiar el idioma en la esquina superior derecha de la interfaz.
 └── README.md
 ```
 
----
-
-## 🧪 Roadmap (en desarrollo)
-
-- [ ] Gestión de máquinas virtuales  
-- [ ] Filtros por nodo  
-- [ ] Monitor de uso de CPU/RAM por contenedor  
-- [ ] Consola integrada  
-- [ ] Acciones masivas (start/stop múltiples)
-
----
-
-## 📋 Licencia
-
-MIT © [Pombo90](https://github.com/Pombo90)
