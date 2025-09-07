@@ -22,16 +22,25 @@
     <div id="message" class="message"></div>
     <table class="table">
       <thead>
-        <tr>
-          <th id="thName"></th>
-          <th id="thVmid">VMID</th>
-          <th id="thStatus"></th>
-          <th id="thActions"></th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="4" id="loading"></td></tr>
-      </tbody>
+  <tr>
+    <th class="sortable" data-key="name">
+      <span data-i18n="name">Nombre</span>
+      <span class="sort-indicator" data-key="name"></span>
+    </th>
+    <th class="sortable" data-key="vmid">
+      <span>VMID</span>
+      <span class="sort-indicator" data-key="vmid"></span>
+    </th>
+    <th class="sortable" data-key="status">
+      <span data-i18n="status">Estado</span>
+      <span class="sort-indicator" data-key="status"></span>
+    </th>
+    <th>
+      <span data-i18n="actions">Acciones</span>
+    </th>
+  </tr>
+</thead>
+<tbody id="tbody"></tbody>
     </table>
   </main>
 
