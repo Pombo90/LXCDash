@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # === Config ===
-REPO_URL="${REPO_URL:-https://github.com/Pombo90/lxcdash.git}"
+REPO_URL="${REPO_URL:-https://github.com/Pombo90/LXCDash.git}"
 INSTALL_DIR="/opt/lxcdash"
 API_PORT="${API_PORT:-3000}"
 WEB_PORT="${WEB_PORT:-8080}"
