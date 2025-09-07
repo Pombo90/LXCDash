@@ -1,0 +1,17 @@
+{
+  "title": "Contenedores LXC",
+  "name": "Nombre",
+  "status": "Estado",
+  "actions": "Acciones",
+  "running": "En ejecución",
+  "stopped": "Detenido",
+  "start": "Iniciar",
+  "stop": "Detener",
+  "reboot": "Reiniciar",
+  "refresh": "Actualizar",
+  "loading": "Cargando...",
+  "empty": "Sin contenedores",
+  "error": "Ha ocurrido un error",
+  "working": "Procesando...",
+  "done": "Hecho"
+}

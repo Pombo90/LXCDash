@@ -1,0 +1,16 @@
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#0b1220;color:#e8eefc}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1e2a44;background:#0f162a;position:sticky;top:0}
+h1{font-size:20px;margin:0}
+.container{padding:16px}
+.actions{display:flex;gap:8px}
+.select,.btn{padding:8px 12px;border-radius:8px;border:1px solid #2a395b;background:#111a33;color:#e8eefc;cursor:pointer}
+.btn.secondary{background:#141f3d}
+.btn.primary{background:#2242a4;border-color:#3256c7}
+.table{width:100%;border-collapse:collapse;margin-top:12px;background:#0f162a;border:1px solid #1e2a44;border-radius:12px;overflow:hidden}
+.table th,.table td{padding:10px 12px;border-bottom:1px solid #1e2a44;text-align:left}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px}
+.badge.ok{background:#16351f;color:#9af29a}
+.badge.stopped{background:#3a1c1c;color:#ff9b9b}
+.row-actions{display:flex;gap:8px}
+.message{margin:8px 0;min-height:22px;font-size:14px}
+.footer{padding:12px 16px;border-top:1px solid #1e2a44;background:#0f162a;display:flex;justify-content:center;color:#94a3b8}

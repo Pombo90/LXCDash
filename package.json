@@ -1,0 +1,13 @@
+{
+  "name": "lxcdash",
+  "version": "0.1.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "express": "^4.19.2"
+  }
+}

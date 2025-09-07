@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LXCDash</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">LXCDash</h1>
+    <div class="actions">
+      <button id="refreshBtn" class="btn secondary"></button>
+      <select id="langSelect" class="select">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="message" class="message"></div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th id="thName"></th>
+          <th id="thVmid">VMID</th>
+          <th id="thStatus"></th>
+          <th id="thActions"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="4" id="loading"></td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <footer class="footer">
+    <span>LXCDash</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

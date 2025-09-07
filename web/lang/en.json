@@ -1,0 +1,17 @@
+{
+  "title": "LXC Containers",
+  "name": "Name",
+  "status": "Status",
+  "actions": "Actions",
+  "running": "Running",
+  "stopped": "Stopped",
+  "start": "Start",
+  "stop": "Stop",
+  "reboot": "Reboot",
+  "refresh": "Refresh",
+  "loading": "Loading...",
+  "empty": "No containers",
+  "error": "An error occurred",
+  "working": "Working...",
+  "done": "Done"
+}
