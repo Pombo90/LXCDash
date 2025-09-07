@@ -14,8 +14,22 @@
         <option value="es">ES</option>
         <option value="en">EN</option>
       </select>
+
       <input id="searchInput" type="search" placeholder="Buscar" aria-label="Buscar" />
+
       <button id="refreshBtn" class="btn" type="button" data-i18n="refresh">Actualizar</button>
+
+      <label class="chk" title="Auto refresh">
+        <input type="checkbox" id="autoRefreshToggle" />
+        <span data-i18n="autoRefresh">Auto</span>
+      </label>
+      <select id="autoRefreshInterval" aria-label="Intervalo de refresco">
+        <option value="5000">5s</option>
+        <option value="10000">10s</option>
+        <option value="15000" selected>15s</option>
+        <option value="30000">30s</option>
+        <option value="60000">60s</option>
+      </select>
     </div>
   </header>
 
