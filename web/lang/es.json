@@ -1,6 +1,9 @@
 {
   "title": "Contenedores LXC",
+  "refresh": "Actualizar",
+  "search": "Buscar",
   "name": "Nombre",
+  "vmid": "VMID",
   "status": "Estado",
   "actions": "Acciones",
   "running": "En ejecución",
@@ -8,10 +11,11 @@
   "start": "Iniciar",
   "stop": "Detener",
   "reboot": "Reiniciar",
-  "refresh": "Actualizar",
   "loading": "Cargando...",
-  "empty": "Sin contenedores",
-  "error": "Ha ocurrido un error",
-  "working": "Procesando...",
-  "done": "Hecho"
+  "empty": "Sin datos",
+  "error_generic": "Ha ocurrido un error",
+  "confirmStart": "¿Iniciar el contenedor {id}?",
+  "confirmStop": "¿Detener el contenedor {id}?",
+  "confirmReboot": "¿Reiniciar el contenedor {id}?",
+  "hintSort": "Haz clic en los encabezados para ordenar"
 }
