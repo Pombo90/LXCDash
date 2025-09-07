@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title data-i18n="title">LXC Containers</title>
+  <title id="docTitle">LXCDash</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1 data-i18n="title">LXC Containers</h1>
+    <h1 id="nodeTitle">—</h1>
+
     <div class="controls">
       <select id="langSelect" aria-label="Language">
         <option value="es">ES</option>
@@ -46,15 +47,29 @@
   <main class="container">
     <div id="errorBox" class="error" style="display:none;"></div>
 
-    <div class="card">
-      <div class="card-head">
-        <span class="muted" data-i18n="hintSort">Haz clic en “Ordenar por” para cambiar el orden</span>
-      </div>
-
-      <div id="cards" class="grid-cards">
+    <!-- Grupo LXC -->
+    <section class="group">
+      <button class="group-head" id="toggleLxc" aria-expanded="true">
+        <span class="group-title">LXC</span>
+        <span class="group-count" id="countLxc">0</span>
+        <span class="group-arrow">▼</span>
+      </button>
+      <div id="cards-lxc" class="grid-cards" data-collapsible="lxc">
         <div class="placeholder" data-i18n="loading">Cargando...</div>
       </div>
-    </div>
+    </section>
+
+    <!-- Grupo VM -->
+    <section class="group">
+      <button class="group-head" id="toggleVm" aria-expanded="true">
+        <span class="group-title">VM</span>
+        <span class="group-count" id="countVm">0</span>
+        <span class="group-arrow">▼</span>
+      </button>
+      <div id="cards-vm" class="grid-cards" data-collapsible="vm">
+        <div class="placeholder" data-i18n="loading">Cargando...</div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot muted">
