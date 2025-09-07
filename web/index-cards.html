@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="title">LXC Containers</title>
+  <link rel="stylesheet" href="./style-cards.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1 data-i18n="title">LXC Containers</h1>
+    <div class="controls">
+      <select id="langSelect" aria-label="Language">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+
+      <input id="searchInput" type="search" placeholder="Buscar" aria-label="Buscar" />
+
+      <label class="sort-wrap">
+        <span data-i18n="sortBy">Ordenar por</span>
+        <select id="sortKey" aria-label="Ordenar por">
+          <option value="vmid">VMID</option>
+          <option value="name" data-i18n="name">Nombre</option>
+          <option value="status" data-i18n="status">Estado</option>
+        </select>
+        <button id="sortDir" class="btn" type="button" title="Dirección">▲</button>
+      </label>
+
+      <button id="refreshBtn" class="btn" type="button" data-i18n="refresh">Actualizar</button>
+
+      <label class="chk" title="Auto refresh">
+        <input type="checkbox" id="autoRefreshToggle" />
+        <span data-i18n="autoRefresh">Auto</span>
+      </label>
+      <select id="autoRefreshInterval" aria-label="Intervalo de refresco">
+        <option value="5000">5s</option>
+        <option value="10000">10s</option>
+        <option value="15000" selected>15s</option>
+        <option value="30000">30s</option>
+        <option value="60000">60s</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="errorBox" class="error" style="display:none;"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="muted" data-i18n="hintSort">Haz clic en “Ordenar por” para cambiar el orden</span>
+      </div>
+
+      <div id="cards" class="grid-cards">
+        <div class="placeholder" data-i18n="loading">Cargando...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="foot muted">
+    <span>© LXCDash</span>
+  </footer>
+
+  <script src="./app-cards.js"></script>
+</body>
+</html>
