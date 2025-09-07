@@ -1,215 +1,191 @@
-// /opt/lxcdash/server.js
-// API para LXCDash: lista LXC + VMs desde /cluster/resources, acciones con resolución de nodo.
+// server.js — LXCDash API (LXC + VMs) usando config original
 
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const https = require('https');
 const axios = require('axios');
+const https = require('https');
 
 const app = express();
 app.use(express.json());
 
-/* ---------------- Config ---------------- */
-const CONFIG_PATHS = [
-  path.join(process.cwd(), 'config.json'),
-  '/opt/lxcdash/config.json',
-];
-
-let config = {
-  host: '127.0.0.1',
-  port: 8006,
-  user: 'root@pam',
-  token_id: 'lxcdash',
-  token_secret: '',
-  verify_tls: false,
-  // node: 'proxmox', // opcional: si lo pones, /api/node lo usará directamente
-};
-
-for (const p of CONFIG_PATHS) {
-  try {
-    if (fs.existsSync(p)) {
-      const c = JSON.parse(fs.readFileSync(p, 'utf8'));
-      config = { ...config, ...c };
-      break;
-    }
-  } catch (e) {
-    console.error('[config] Error leyendo', p, e.message);
-  }
+// ---------- Carga de config ----------
+const cfgPath = path.join(__dirname, 'config.json');
+let cfg = {};
+if (fs.existsSync(cfgPath)) {
+  cfg = JSON.parse(fs.readFileSync(cfgPath));
+} else {
+  console.error('Missing config.json. Run lxcdash.sh installer.');
+  process.exit(1);
 }
 
-const baseURL = `https://${config.host}:${config.port}/api2/json`;
-const httpsAgent = new https.Agent({ rejectUnauthorized: !!config.verify_tls });
+if (!cfg.proxmox) {
+  console.error('config.json inválido: falta la clave "proxmox"');
+  process.exit(1);
+}
 
-const api = axios.create({
+const {
+  host,
+  node: cfgNode,           // puede venir vacío => autodetectar
+  port,
+  user,
+  tokenId,
+  tokenSecret,
+  verifyTls
+} = cfg.proxmox;
+
+const baseURL = `https://${host}:${port}/api2/json`;
+const authHeader = `PVEAPIToken=${user}!${tokenId}=${tokenSecret}`;
+
+const axiosInstance = axios.create({
   baseURL,
-  httpsAgent,
-  headers: {
-    Authorization: `PVEAPIToken=${config.user}!${config.token_id}=${config.token_secret}`,
-  },
-  timeout: 15000,
+  headers: { Authorization: authHeader },
+  httpsAgent: new https.Agent({ rejectUnauthorized: !!verifyTls }),
+  timeout: 15000
 });
 
-const DEBUG = process.env.DEBUG?.toString() === '1';
-
-/* ---------------- Helpers ---------------- */
-function logDebug(...args) { if (DEBUG) console.log('[debug]', ...args); }
-
-function sendError(res, err) {
-  const msg = err?.response?.data || err?.message || 'error';
-  const code = err?.response?.status || 502;
-  console.error('[api error]', code, msg);
-  res.status(code).json({ ok: false, error: msg });
+// ---------- Helpers ----------
+function apiError(res, err) {
+  const status = err?.response?.status || 500;
+  const data = err?.response?.data || { message: String(err?.message || err) };
+  console.error('[API ERROR]', status, data);
+  res.status(status).json({ error: true, status, data });
 }
 
-// Mapea un item de /cluster/resources (type=vm) a estructura común
-function mapVmOrCt(x) {
-  // x.type ∈ { 'qemu', 'lxc' }
-  return {
-    vmid: x.vmid,
-    name: x.name || `${x.type}${x.vmid}`,
-    status: x.status || '',
-    node: x.node,
-    type: x.type,
-  };
+/**
+ * Obtiene el nombre de nodo a usar:
+ * - Prioriza ?node=<nodo> en la query
+ * - Luego cfg.proxmox.node si está definido
+ * - Si no, autodetecta el primero "online" desde /nodes
+ */
+async function getNodeName(preferred) {
+  if (preferred && String(preferred).trim()) return preferred;
+  if (cfgNode && String(cfgNode).trim()) return cfgNode;
+
+  // Autodetección
+  const r = await axiosInstance.get('/nodes');
+  const nodes = r.data?.data || [];
+  if (!nodes.length) throw new Error('No hay nodos en /nodes');
+  const online = nodes.find(n => n.status === 'online');
+  return online?.node || nodes[0].node;
 }
 
-// Lista todos los “VMs” (incluye LXC) del cluster
-async function listAllVmLike() {
-  const r = await api.get('/cluster/resources', { params: { type: 'vm' } });
-  const arr = Array.isArray(r.data?.data) ? r.data.data : [];
-  const mapped = arr.map(mapVmOrCt);
-  logDebug('vm-like items:', mapped.length);
-  return mapped;
-}
-
-// Encuentra el nodo para un vmid y tipo (qemu|lxc) consultando el cluster
-async function findNodeForId(vmid, type) {
-  const all = await listAllVmLike();
-  const one = all.find(x => String(x.vmid) === String(vmid) && x.type === type);
-  if (!one) throw new Error(`No se encontró ${type} con vmid ${vmid} en el cluster`);
-  return one.node;
-}
-
-// Nombre de nodo “bonito”
-async function getNodeName() {
-  if (config.node && String(config.node).trim()) return config.node;
-  try {
-    const r = await api.get('/nodes');
-    const nodes = r.data?.data || [];
-    const online = nodes.find(n => n.status === 'online');
-    return (online?.node || nodes[0]?.node || 'Nodo');
-  } catch {
-    return 'Nodo';
-  }
-}
-
-/* ---------------- Rutas básicas ---------------- */
+// ---------- Rutas básicas ----------
 app.get('/api/ping', (_req, res) => res.json({ ok: true }));
 
-app.get('/api/node', async (_req, res) => {
+// Nombre del nodo (útil para el título de la UI)
+app.get('/api/node', async (req, res) => {
   try {
-    const node = await getNodeName();
-    res.json({ node });
+    const n = await getNodeName(req.query.node);
+    res.json({ node: n });
   } catch (err) {
-    sendError(res, err);
+    apiError(res, err);
   }
 });
 
-/* ---------------- Listados ---------------- */
-// LXC únicamente
-app.get('/api/containers', async (_req, res) => {
+// ---------- LXC (contenedores) ----------
+app.get('/api/containers', async (req, res) => {
   try {
-    const all = await listAllVmLike();
-    const list = all.filter(x => x.type === 'lxc');
+    const n = await getNodeName(req.query.node);
+    const { data } = await axiosInstance.get(`/nodes/${encodeURIComponent(n)}/lxc`);
+    const list = (data?.data || []).map(c => ({
+      vmid: c.vmid,
+      name: c.name || `ct${c.vmid}`,
+      status: c.status,
+      uptime: c.uptime,
+      node: n
+    }));
     res.json({ data: list });
   } catch (err) {
-    sendError(res, err);
+    apiError(res, err);
   }
 });
 
-// VMs QEMU únicamente
-app.get('/api/vms', async (_req, res) => {
+async function lxcAction(vmid, action, nodeFromQuery) {
+  const n = await getNodeName(nodeFromQuery);
+  return axiosInstance.post(`/nodes/${encodeURIComponent(n)}/lxc/${encodeURIComponent(vmid)}/status/${action}`, {});
+}
+
+app.post('/api/containers/:vmid/start', async (req, res) => {
   try {
-    const all = await listAllVmLike();
-    const list = all.filter(x => x.type === 'qemu');
+    await lxcAction(req.params.vmid, 'start', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
+});
+
+app.post('/api/containers/:vmid/stop', async (req, res) => {
+  try {
+    await lxcAction(req.params.vmid, 'stop', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
+});
+
+app.post('/api/containers/:vmid/reboot', async (req, res) => {
+  try {
+    await lxcAction(req.params.vmid, 'reboot', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
+});
+
+// ---------- VMs (QEMU) ----------
+app.get('/api/vms', async (req, res) => {
+  try {
+    const n = await getNodeName(req.query.node);
+    const { data } = await axiosInstance.get(`/nodes/${encodeURIComponent(n)}/qemu`);
+    const list = (data?.data || []).map(v => ({
+      vmid: v.vmid,
+      name: v.name || `vm${v.vmid}`,
+      status: v.status,
+      uptime: v.uptime,
+      node: n
+    }));
     res.json({ data: list });
   } catch (err) {
-    sendError(res, err);
+    apiError(res, err);
   }
 });
 
-/* ---------------- Acciones: LXC ---------------- */
-app.post('/api/containers/:id/start', async (req, res) => {
+async function vmAction(vmid, action, nodeFromQuery, params) {
+  const n = await getNodeName(nodeFromQuery);
+  const url = `/nodes/${encodeURIComponent(n)}/qemu/${encodeURIComponent(vmid)}/status/${action}`;
+  return axiosInstance.post(url, {}, { params: params || {} });
+}
+
+app.post('/api/vms/:vmid/start', async (req, res) => {
   try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'lxc');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/lxc/${encodeURIComponent(id)}/status/start`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
+    await vmAction(req.params.vmid, 'start', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
 });
 
-app.post('/api/containers/:id/stop', async (req, res) => {
+app.post('/api/vms/:vmid/shutdown', async (req, res) => {
   try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'lxc');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/lxc/${encodeURIComponent(id)}/status/stop`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
+    await vmAction(req.params.vmid, 'shutdown', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
 });
 
-app.post('/api/containers/:id/reboot', async (req, res) => {
+// Hibernar: suspend to disk (todisk=1). Para suspend-to-RAM usa todisk=0.
+app.post('/api/vms/:vmid/suspend', async (req, res) => {
   try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'lxc');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/lxc/${encodeURIComponent(id)}/status/reboot`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
+    await vmAction(req.params.vmid, 'suspend', req.query.node, { todisk: 1 });
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
 });
 
-/* ---------------- Acciones: VMs ---------------- */
-app.post('/api/vms/:id/start', async (req, res) => {
+app.post('/api/vms/:vmid/reboot', async (req, res) => {
   try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'qemu');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/qemu/${encodeURIComponent(id)}/status/start`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
+    await vmAction(req.params.vmid, 'reboot', req.query.node);
+    res.json({ ok: true });
+  } catch (err) { apiError(res, err); }
 });
 
-app.post('/api/vms/:id/shutdown', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'qemu');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/qemu/${encodeURIComponent(id)}/status/shutdown`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
-});
-
-app.post('/api/vms/:id/suspend', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'qemu');
-    // Hibernar (to disk). Para suspend-to-RAM usa todisk=0.
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/qemu/${encodeURIComponent(id)}/status/suspend`, null, {
-      params: { todisk: 1 },
-    });
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
-});
-
-app.post('/api/vms/:id/reboot', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const node = req.query.node || await findNodeForId(id, 'qemu');
-    const r = await api.post(`/nodes/${encodeURIComponent(node)}/qemu/${encodeURIComponent(id)}/status/reboot`);
-    res.json({ ok: true, task: r.data });
-  } catch (err) { sendError(res, err); }
-});
-
-/* ---------------- Static web (si no usas nginx) ---------------- */
+// ---------- Static (si no usas Nginx delante) ----------
 app.use('/', express.static(path.join(__dirname, 'web')));
 
-/* ---------------- Start ---------------- */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`[lxcdash] API en http://127.0.0.1:${PORT}`));
+// ---------- Arranque ----------
+const bind = cfg.server?.bind || '127.0.0.1';
+const apiPort = cfg.server?.port || 3000;
+app.listen(apiPort, bind, () => {
+  console.log(`LXCDash API listening on http://${bind}:${apiPort}`);
+});
