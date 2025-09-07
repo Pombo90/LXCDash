@@ -13,14 +13,16 @@ a{ color:var(--primary); text-decoration:none }
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
   padding:16px; border-bottom:1px solid var(--border); background:var(--panel);
+  gap: 12px;
 }
 .topbar h1{ margin:0; font-size:18px }
-.controls{ display:flex; gap:8px; align-items:center }
+.controls{ display:flex; gap:8px; align-items:center; flex-wrap: wrap }
 .controls select,.controls input{
   background:#0e1218; color:var(--text); border:1px solid var(--border);
   padding:8px 10px; border-radius:8px; outline:none;
 }
 .controls input{ min-width:220px }
+.chk{ display:flex; align-items:center; gap:6px; color:var(--muted) }
 
 .btn{
   background:#223044; color:var(--text); border:1px solid var(--border);
@@ -54,6 +56,13 @@ th.sortable .sort-indicator.active.desc::after{ content:"▼" }
 .error{
   background:rgba(255,82,82,.12); border:1px solid rgba(255,82,82,.35);
   color:#ff8b8b; padding:10px 12px; border-radius:10px; margin:12px 0;
+}
+
+/* Highlight suave cuando cambia estado */
+td.update-blink { animation: cellflash .6s ease-out; }
+@keyframes cellflash {
+  from { background: rgba(78,168,255,.18); }
+  to   { background: transparent; }
 }
 
 .foot{ padding:16px; text-align:center; border-top:1px solid var(--border) }
