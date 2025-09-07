@@ -39,7 +39,7 @@ Antes de instalar LXCDash, crea un contenedor LXC en Proxmox con los siguientes 
 Una vez creado y arrancado el contenedor Debian, entra en él (por consola o SSH) y ejecuta el siguiente comando:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pombo90/lxcdash/main/lxcdash.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pombo90/LXCDash/main/lxcdash.sh)"
 ```
 
 > ℹ️ **Durante la instalación**, se te pedirá que introduzcas:
