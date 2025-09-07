@@ -1,149 +1,75 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
+APP_DIR="/opt/lxcdash"
+REPO_URL="https://github.com/Pombo90/LXCDash.git"
+BRANCH="main"
 
-# === Config ===
-REPO_URL="${REPO_URL:-https://github.com/Pombo90/LXCDash.git}"
-INSTALL_DIR="/opt/lxcdash"
-API_PORT="${API_PORT:-3000}"
-WEB_PORT="${WEB_PORT:-8080}"
+mkdir -p "$APP_DIR"
 
-# === Helpers ===
-die() { echo -e "\033[01;31m[ERROR]\033[m $*"; exit 1; }
-ok()  { echo -e "\033[1;92m[OK]\033[m $*"; }
-info(){ echo -e "\033[33m[INFO]\033[m $*"; }
-
-require_root() { [ "$(id -u)" -eq 0 ] || die "Ejecuta este script como root."; }
-
-# === Checks ===
-require_root
-if ! command -v apt-get >/dev/null 2>&1; then
-  die "Este instalador está pensado para Debian/Ubuntu (apt)."
-fi
-
-# === Ask for Proxmox API details ===
-echo
-echo "· Configura el acceso a la API de Proxmox (usado por LXCDash)"
-read -rp "Host o IP de Proxmox (ej. 192.168.1.10): " PVE_HOST
-PVE_HOST="${PVE_HOST:-127.0.0.1}"
-
-read -rp "Nombre del nodo (ej. pve): " PVE_NODE
-PVE_NODE="${PVE_NODE:-pve}"
-
-read -rp "Puerto de API (default 8006): " PVE_PORT
-PVE_PORT="${PVE_PORT:-8006}"
-
-read -rp "Usuario (ej. root@pam): " PVE_USER
-PVE_USER="${PVE_USER:-root@pam}"
-
-read -rp "ID del token (ej. lxcdash): " PVE_TOKEN_ID
-[ -z "${PVE_TOKEN_ID}" ] && die "ID del token requerido."
-
-read -rsp "Token Secret: " PVE_TOKEN_SECRET
-echo
-[ -z "${PVE_TOKEN_SECRET}" ] && die "Token secret requerido."
-
-read -rp "Verificar certificado TLS (y/N): " VERIFY_TLS_ANS
-case "${VERIFY_TLS_ANS,,}" in
-  y|yes) VERIFY_TLS=true ;;
-  *)     VERIFY_TLS=false ;;
-esac
-
-# === System dependencies ===
-export DEBIAN_FRONTEND=noninteractive
-info "Actualizando paquetes..."
-apt-get update -y >/dev/null
-
-info "Instalando dependencias: curl, git, nginx..."
-apt-get install -y curl ca-certificates git nginx >/dev/null
-
-# Node.js (v20.x)
-if ! command -v node >/dev/null 2>&1; then
-  info "Instalando Node.js 20.x..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
-  apt-get install -y nodejs >/dev/null
-fi
-
-# pm2
-if ! command -v pm2 >/dev/null 2>&1; then
-  info "Instalando pm2..."
-  npm install -g pm2 >/dev/null
-fi
-
-# === Fetch code ===
-if [ -d "${INSTALL_DIR}" ]; then
-  info "Actualizando código en ${INSTALL_DIR}..."
-  git -C "${INSTALL_DIR}" pull --ff-only || true
+# ¿Ya está instalado?
+if [ -d "$APP_DIR/.git" ]; then
+  echo "[INFO] Instalación detectada. Actualizando código…"
+  cd "$APP_DIR"
+  git fetch --all --prune
+  git reset --hard "origin/${BRANCH}"
 else
-  info "Clonando repositorio en ${INSTALL_DIR}..."
-  git clone --depth=1 "${REPO_URL}" "${INSTALL_DIR}" >/dev/null
+  echo "[INFO] Instalando LXCDash…"
+  # Si ya existe la carpeta (instalación anterior sin .git), preservamos config.json si estuviera
+  KEEP_CFG=""
+  [ -f "$APP_DIR/config.json" ] && KEEP_CFG="$(cat "$APP_DIR/config.json")"
+
+  rm -rf "$APP_DIR"/*
+  git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
+
+  if [ -n "$KEEP_CFG" ]; then
+    echo "$KEEP_CFG" > "$APP_DIR/config.json"
+    echo "[INFO] Se ha conservado tu config.json anterior."
+  fi
 fi
 
-# === Install API deps ===
-cd "${INSTALL_DIR}"
-info "Instalando dependencias de Node (API)..."
-npm install --omit=dev >/dev/null
+# Dependencias backend si existen
+if [ -f "$APP_DIR/package.json" ]; then
+  cd "$APP_DIR"
+  npm ci --omit=dev
+fi
 
-# === Write config.json ===
-cat > "${INSTALL_DIR}/config.json" <<EOF
-{
-  "proxmox": {
-    "host": "${PVE_HOST}",
-    "node": "${PVE_NODE}",
-    "port": ${PVE_PORT},
-    "user": "${PVE_USER}",
-    "tokenId": "${PVE_TOKEN_ID}",
-    "tokenSecret": "${PVE_TOKEN_SECRET}",
-    "verifyTls": ${VERIFY_TLS}
-  },
-  "server": {
-    "port": ${API_PORT},
-    "bind": "127.0.0.1"
+# Nginx (asegúrate de tener el proxy_pass correcto con /api/)
+if [ ! -f /etc/nginx/sites-available/lxcdash ]; then
+cat >/etc/nginx/sites-available/lxcdash <<'NGINX'
+server {
+  listen 8080 default_server;
+  listen [::]:8080 default_server;
+  server_name _;
+
+  root /opt/lxcdash/web;
+  index index.html;
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:3000/api/;   # ← conserva el prefijo /api
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300;
+  }
+
+  location / {
+    try_files $uri $uri/ =404;
   }
 }
-EOF
-
-ok "Configuración escrita en ${INSTALL_DIR}/config.json"
-
-# === Nginx site ===
-info "Configurando nginx (puerto ${WEB_PORT})..."
-cat > /etc/nginx/sites-available/lxcdash <<'NGINX'
-server {
-    listen 8080 default_server;
-    listen [::]:8080 default_server;
-    server_name _;
-
-    root /opt/lxcdash/web;
-    index index.html;
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:3000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300;
-    }
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
 NGINX
+  ln -sf /etc/nginx/sites-available/lxcdash /etc/nginx/sites-enabled/lxcdash
+fi
 
-# Enable site
-ln -sf /etc/nginx/sites-available/lxcdash /etc/nginx/sites-enabled/lxcdash
-# Remove default if exists
-[ -e /etc/nginx/sites-enabled/default ] && rm -f /etc/nginx/sites-enabled/default || true
-systemctl restart nginx
+nginx -t && systemctl reload nginx
 
-# === Start API with pm2 ===
-info "Iniciando API con pm2..."
-pm2 stop lxcdash >/dev/null 2>&1 || true
-pm2 start server.js --name lxcdash >/dev/null
-pm2 save >/dev/null
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+# PM2
+if ! pm2 describe lxcdash >/dev/null 2>&1; then
+  pm2 start "$APP_DIR/server.js" --name lxcdash
+  pm2 save
+else
+  pm2 restart lxcdash
+fi
 
-ok "LXCDash instalado."
-echo
-echo "URL: http://$(hostname -I | awk '{print $1}'):${WEB_PORT}"
+echo "[OK] LXCDash listo. Pruebas rápidas:"
+echo "  - http://127.0.0.1:3000/api/ping"
+echo "  - http://$(hostname -I | awk '{print $1}'):8080/api/ping"
