@@ -3,51 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LXCDash</title>
-  <link rel="stylesheet" href="style.css" />
+  <title data-i18n="title">LXC Containers</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1 id="title">LXCDash</h1>
-    <div class="actions">
-      <button id="refreshBtn" class="btn secondary"></button>
-      <select id="langSelect" class="select">
+    <h1 data-i18n="title">LXC Containers</h1>
+    <div class="controls">
+      <select id="langSelect" aria-label="Language">
         <option value="es">ES</option>
         <option value="en">EN</option>
       </select>
+      <input id="searchInput" type="search" placeholder="Buscar" aria-label="Buscar" />
+      <button id="refreshBtn" class="btn" type="button" data-i18n="refresh">Actualizar</button>
     </div>
   </header>
 
   <main class="container">
-    <div id="message" class="message"></div>
-    <table class="table">
-      <thead>
-  <tr>
-    <th class="sortable" data-key="name">
-      <span data-i18n="name">Nombre</span>
-      <span class="sort-indicator" data-key="name"></span>
-    </th>
-    <th class="sortable" data-key="vmid">
-      <span>VMID</span>
-      <span class="sort-indicator" data-key="vmid"></span>
-    </th>
-    <th class="sortable" data-key="status">
-      <span data-i18n="status">Estado</span>
-      <span class="sort-indicator" data-key="status"></span>
-    </th>
-    <th>
-      <span data-i18n="actions">Acciones</span>
-    </th>
-  </tr>
-</thead>
-<tbody id="tbody"></tbody>
-    </table>
+    <div id="errorBox" class="error" style="display:none;"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="muted" data-i18n="hintSort">Haz clic en los encabezados para ordenar</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th class="sortable" data-key="name">
+                <span data-i18n="name">Nombre</span>
+                <span class="sort-indicator" data-key="name"></span>
+              </th>
+              <th class="sortable" data-key="vmid">
+                <span>VMID</span>
+                <span class="sort-indicator" data-key="vmid"></span>
+              </th>
+              <th class="sortable" data-key="status">
+                <span data-i18n="status">Estado</span>
+                <span class="sort-indicator" data-key="status"></span>
+              </th>
+              <th>
+                <span data-i18n="actions">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="4" data-i18n="loading">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 
-  <footer class="footer">
-    <span>LXCDash</span>
+  <footer class="foot muted">
+    <span>© LXCDash</span>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
