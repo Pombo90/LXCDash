@@ -9,7 +9,7 @@ Está diseñado para ejecutarse desde un contenedor Debian dentro de tu infraest
 
 - Muestra todos tus contenedores LXC activos (en todos los estados)
 - Permite iniciar, detener o reiniciar contenedores con un clic
-- Indica el el estado (ejecutándose / detenido) de cada uno
+- Indica el estado (ejecutándose / detenido) de cada uno
 - Tiene selector de idioma (Español / Inglés)
 - Accesible desde cualquier navegador dentro de tu red local
 
@@ -41,6 +41,14 @@ Una vez creado y arrancado el contenedor Debian, entra en él (por consola o SSH
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pombo90/lxcdash/main/lxcdash.sh)"
 ```
+
+> ℹ️ **Durante la instalación**, se te pedirá que introduzcas:
+>
+> - La IP o nombre del nodo Proxmox donde se ejecutan los LXC
+> - El **token de API de Proxmox** (nombre de usuario, ID de token y clave secreta)
+> - El **nombre del nodo** (por ejemplo: `pve`)
+>
+> Estos datos son necesarios para que LXCDash pueda consultar el estado de los contenedores y enviar acciones como start, stop o reboot.
 
 Este script:
 
@@ -86,4 +94,3 @@ Puedes cambiar el idioma en la esquina superior derecha de la interfaz.
 │       └── es.json
 └── README.md
 ```
-
