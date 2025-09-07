@@ -1,6 +1,9 @@
 {
   "title": "LXC Containers",
+  "refresh": "Refresh",
+  "search": "Search",
   "name": "Name",
+  "vmid": "VMID",
   "status": "Status",
   "actions": "Actions",
   "running": "Running",
@@ -8,10 +11,11 @@
   "start": "Start",
   "stop": "Stop",
   "reboot": "Reboot",
-  "refresh": "Refresh",
   "loading": "Loading...",
-  "empty": "No containers",
-  "error": "An error occurred",
-  "working": "Working...",
-  "done": "Done"
+  "empty": "No data",
+  "error_generic": "An error occurred",
+  "confirmStart": "Start container {id}?",
+  "confirmStop": "Stop container {id}?",
+  "confirmReboot": "Reboot container {id}?",
+  "hintSort": "Click table headers to sort"
 }
