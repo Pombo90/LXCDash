@@ -1,31 +1,104 @@
 # LXCDash
 
-**LXCDash** es una interfaz web ligera para gestionar contenedores LXC en tu servidor Proxmox, desde un contenedor Debian.
-
-> ⚠️ Este script **no crea el contenedor LXC automáticamente**. Debes crearlo manualmente en Proxmox y luego ejecutar el instalador dentro del contenedor.
-
----
-
-## 🧱 Requisitos del contenedor LXC
-
-Crea un contenedor con las siguientes especificaciones mínimas:
-
-- 🔹 **Plantilla**: Debian 12 estándar  
-- 🧠 **RAM**: 512 MB (recomendado: 1 GB)  
-- 🧮 **CPU**: 1 vCPU  
-- 💾 **Disco**: 4 GB  
-- 🌐 **Red**: DHCP o IP estática accesible  
-- ⚙️ **Tipo**: Puede ser *privilegiado* o *no privilegiado*. Ambos son compatibles.  
-- 📥 **Acceso a internet** dentro del LXC  
-- 🔐 Acceso root (o usuario con `sudo`)  
-
-> 📝 Puedes usar la plantilla `debian-12-standard_amd64.tar.zst` desde Proxmox (catálogo oficial) al crear el contenedor.
+**LXCDash** es un panel web ligero para gestionar contenedores LXC en Proxmox de forma rápida, visual e intuitiva.  
+Está diseñado para ejecutarse desde un contenedor Debian dentro de tu infraestructura Proxmox y accederse vía navegador.
 
 ---
 
-## 🚀 Instalación
+## 🚀 ¿Qué hace LXCDash?
 
-1. Accede al contenedor:
+- Muestra todos tus contenedores LXC activos (en todos los estados)
+- Permite iniciar, detener o reiniciar contenedores con un clic
+- Indica el el estado (ejecutándose / detenido) de cada uno
+- Tiene selector de idioma (Español / Inglés)
+- Accesible desde cualquier navegador dentro de tu red local
 
-   ```bash
-   pct exec <ID_DEL_LXC> -- bash
+---
+
+## 🧱 Requisitos
+
+### 1. Crear el contenedor LXC manualmente
+
+Antes de instalar LXCDash, crea un contenedor LXC en Proxmox con los siguientes requisitos mínimos:
+
+| Requisito       | Valor recomendado                  |
+|-----------------|-------------------------------------|
+| **Plantilla**   | `debian-12-standard_amd64.tar.zst` |
+| **RAM**         | 512 MB (mínimo), 1 GB recomendado   |
+| **CPU**         | 1 vCPU                              |
+| **Disco**       | 4 GB                                |
+| **Tipo**        | Privilegiado o no privilegiado ✅    |
+| **Red**         | IP accesible desde tu LAN           |
+| **Acceso root** | Obligatorio                         |
+| **Internet**    | El contenedor debe tener acceso     |
+
+---
+
+## ⚙️ Instalación
+
+Una vez creado y arrancado el contenedor Debian, entra en él (por consola o SSH) y ejecuta el siguiente comando:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pombo90/lxcdash/main/lxcdash.sh)"
+```
+
+Este script:
+
+- Instala las dependencias necesarias (`nginx`, `nodejs`, `pm2`, etc.)
+- Copia los archivos de la interfaz web en `/opt/lxcdash/web`
+- Configura `nginx` para servirla en el puerto **8080**
+- Inicia la API como servicio persistente usando `pm2`
+
+---
+
+## 🌐 Acceso a la interfaz
+
+Abre tu navegador y entra en:
+
+```
+http://<IP_DEL_LXC>:8080
+```
+
+---
+
+## 🌍 Selector de idioma
+
+LXCDash está disponible en:
+
+- Español 🇪🇸  
+- Inglés 🇬🇧
+
+Puedes cambiar el idioma en la esquina superior derecha de la interfaz.
+
+---
+
+## 📁 Estructura del repositorio
+
+```
+.
+├── lxcdash.sh               # Script de instalación principal
+├── web/                     # Archivos de la interfaz web
+│   ├── index.html
+│   ├── style.css
+│   ├── app.js
+│   └── lang/
+│       ├── en.json
+│       └── es.json
+└── README.md
+```
+
+---
+
+## 🧪 Roadmap (en desarrollo)
+
+- [ ] Gestión de máquinas virtuales  
+- [ ] Filtros por nodo  
+- [ ] Monitor de uso de CPU/RAM por contenedor  
+- [ ] Consola integrada  
+- [ ] Acciones masivas (start/stop múltiples)
+
+---
+
+## 📋 Licencia
+
+MIT © [Pombo90](https://github.com/Pombo90)
