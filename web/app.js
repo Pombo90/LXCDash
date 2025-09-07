@@ -1,4 +1,4 @@
-/* web/app.js — LXCDash (sortable columns + i18n + actions) */
+/* web/app.js — LXCDash (sort by columns + i18n + actions + disabled buttons) */
 
 /* ========= Global State ========= */
 const STATE = {
@@ -9,7 +9,6 @@ const STATE = {
 
 const UI = {
   t: {
-    // Fallbacks (se sobrescriben con /lang/<code>.json)
     title: 'LXC Containers',
     refresh: 'Actualizar',
     search: 'Buscar',
@@ -28,6 +27,7 @@ const UI = {
     confirmStart: '¿Iniciar el contenedor {id}?',
     confirmStop: '¿Detener el contenedor {id}?',
     confirmReboot: '¿Reiniciar el contenedor {id}?',
+    hintSort: 'Haz clic en los encabezados para ordenar',
   },
 };
 
@@ -46,19 +46,18 @@ async function setLanguage(langCode) {
     STATE.lang = langCode;
     localStorage.setItem('lxcdash_lang', langCode);
   } catch {
-    // mantén fallbacks si falla
+    // si falla, mantenemos fallbacks
   }
-  // Actualiza textos estáticos (data-i18n)
+  // textos estáticos
   qsa('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (UI.t[key]) el.textContent = UI.t[key];
   });
-  // Actualiza placeholder search si existe
   const search = qs('#searchInput');
   if (search && UI.t.search) search.placeholder = UI.t.search;
 
-  updateSortIndicators(); // por si cambia dirección/indicadores con textos
-  renderTable(); // repinta por si hay textos traducidos en celdas
+  updateSortIndicators();
+  renderTable();
 }
 
 /* ========= Sorting ========= */
@@ -67,10 +66,8 @@ function applySort(items) {
   const mul = dir === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => {
     let va = a[key], vb = b[key];
-    // Campos numéricos conocidos
     if (key === 'vmid' || key === 'uptime') {
-      va = Number(va);
-      vb = Number(vb);
+      va = Number(va); vb = Number(vb);
     } else {
       va = (va ?? '').toString().toLowerCase();
       vb = (vb ?? '').toString().toLowerCase();
@@ -129,12 +126,13 @@ async function loadContainers() {
 
 /* ========= Render ========= */
 function renderTable() {
-  const tbody = qs('#tbody');
+  const tbody = document.getElementById('tbody');
   if (!tbody) return;
-  const search = qs('#searchInput');
+
+  const search = document.getElementById('searchInput');
   const term = (search?.value || '').trim().toLowerCase();
 
-  // filtro simple por nombre/vmid
+  // filtro por nombre/vmid
   let items = STATE.items.filter(it => {
     if (!term) return true;
     const hay = [
@@ -144,6 +142,7 @@ function renderTable() {
     return hay.includes(term);
   });
 
+  // aplica orden actual
   items = applySort(items);
 
   if (!items.length) {
@@ -152,19 +151,28 @@ function renderTable() {
   }
 
   tbody.innerHTML = items.map(it => {
-    const statusBadge = it.status === 'running'
+    const isRunning = it.status === 'running';
+
+    // Reglas que pediste:
+    // running  -> Iniciar deshabilitado; Detener/Reiniciar habilitados
+    // stopped  -> Detener/Reiniciar deshabilitados; Iniciar habilitado
+    const startDisabled  = isRunning;
+    const stopDisabled   = !isRunning;
+    const rebootDisabled = !isRunning;
+
+    const statusBadge = isRunning
       ? `<span class="badge ok">${UI.t.running}</span>`
       : `<span class="badge stopped">${UI.t.stopped}</span>`;
-    const safeName = it.name || `ct${it.vmid}`;
+
     return `
       <tr>
-        <td>${safeName}</td>
+        <td>${it.name || `ct${it.vmid}`}</td>
         <td>${it.vmid}</td>
         <td>${statusBadge}</td>
         <td class="row-actions">
-          <button class="btn primary" data-act="start" data-id="${it.vmid}">${UI.t.start}</button>
-          <button class="btn secondary" data-act="stop" data-id="${it.vmid}">${UI.t.stop}</button>
-          <button class="btn secondary" data-act="reboot" data-id="${it.vmid}">${UI.t.reboot}</button>
+          <button class="btn primary"   data-act="start"  data-id="${it.vmid}" ${startDisabled  ? 'disabled aria-disabled="true"' : ''}>${UI.t.start}</button>
+          <button class="btn secondary" data-act="stop"   data-id="${it.vmid}" ${stopDisabled   ? 'disabled aria-disabled="true"' : ''}>${UI.t.stop}</button>
+          <button class="btn secondary" data-act="reboot" data-id="${it.vmid}" ${rebootDisabled ? 'disabled aria-disabled="true"' : ''}>${UI.t.reboot}</button>
         </td>
       </tr>`;
   }).join('');
@@ -181,10 +189,9 @@ async function doAction(vmid, action) {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // pequeño delay para que Proxmox cambie estado
     await new Promise(r => setTimeout(r, 600));
     await loadContainers();
-  } catch (e) {
+  } catch {
     showError(UI.t.error_generic);
   } finally {
     btns.forEach(b => b.disabled = false);
@@ -222,7 +229,6 @@ function wireEvents() {
 
   const langSel = qs('#langSelect');
   if (langSel) {
-    // set initial
     langSel.value = STATE.lang;
     langSel.addEventListener('change', (e) => setLanguage(e.target.value));
   }
@@ -232,6 +238,7 @@ function wireEvents() {
     tbody.addEventListener('click', (ev) => {
       const btn = ev.target.closest('button[data-act][data-id]');
       if (!btn) return;
+      if (btn.disabled) return; // no actuar si está deshabilitado
       const act = btn.dataset.act;
       const id  = btn.dataset.id;
       if (!act || !id) return;
@@ -240,17 +247,14 @@ function wireEvents() {
   }
 }
 
-/* ========= Auto refresh (opcional, suave) ========= */
+/* ========= Auto refresh ========= */
 let refreshTimer = null;
 function startAutoRefresh() {
   stopAutoRefresh();
-  refreshTimer = setInterval(loadContainers, 15000); // 15s
+  refreshTimer = setInterval(loadContainers, 15000);
 }
 function stopAutoRefresh() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
 }
 
 /* ========= Init ========= */
