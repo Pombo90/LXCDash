@@ -1,3 +1,5 @@
+*WORK IN PROGRESS*
+
 # LXCDash
 
 **LXCDash** es un panel web ligero para gestionar contenedores LXC en Proxmox de forma rápida, visual e intuitiva.  
